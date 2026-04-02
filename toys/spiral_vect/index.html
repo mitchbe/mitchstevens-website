@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+	<script>
+		const CoreUtil = {
+			Math: {
+				degToRad(deg) {
+					return deg * (Math.PI / 180);
+				},
+				randInt(min, max) {
+					min = Math.ceil(min);
+					max = Math.floor(max);
+					return Math.floor(Math.random() * (max - min + 1)) + min;
+				}
+			},
+			Html: {
+				parseElement(htmlText) {
+					const template = document.createElement("template");
+					template.innerHTML = htmlText;
+					return template.content.firstElementChild;
+				},
+				enableDragEvents(element) {
+					if (!(element instanceof EventTarget)) {
+						throw new Error("Must be instance of EventListener to drag");
+					}
+					let lastX = 0, lastY = 0;
+					element.addEventListener("mousedown", e => {
+						e.preventDefault();
+						lastX = e.clientX;
+						lastY = e.clientY;
+						document.onmouseup = onDragRelease;
+						document.onmousemove = onDrag;
+					}, false);
+
+					function onDrag(e) {
+						e.preventDefault();
+						const diffX = e.clientX - lastX;
+						const diffY = e.clientY - lastY;
+						lastX = e.clientX;
+						lastY = e.clientY;
+						element.dispatchEvent(new CustomEvent("drag", {
+							detail: { diffX, diffY }
+						}));
+					}
+
+					function onDragRelease() {
+						document.onmouseup = null;
+						document.onmousemove = null;
+					}
+				}
+			}
+		};
+	</script>
+	<script src="spiralgraph.js"></script>
+
+	<script>
+		const windows = [];
+
+		function isCanvasSupported() {
+			const el = document.createElement('canvas');
+			return !!(el.getContext && el.getContext('2d'));
+		}
+
+		function isMobileDevice() {
+			return /Mobi/.test(navigator.userAgent); 
+		}
+
+		function isInternetExplorer() {
+			return !!navigator.userAgent.match(/Trident/g) || !!navigator.userAgent.match(/MSIE/g);
+		}
+
+		function addWindow(stripStart, stripSize, multiplier, radius,
+						   stripStartVector, stripSizeVector, multiplierVector, radiusVector,
+						   size, colour) {
+			const w = new GraphWindow(stripStart, stripSize, multiplier, radius, 
+								    	stripStartVector, stripSizeVector, multiplierVector, radiusVector, 
+										size, colour);
+			const stageEl = document.querySelector("section.stage");
+			stageEl.appendChild(w.el);
+			windows.push(w);
+			w.onClose(() => {
+				const index = windows.indexOf(w);
+				if (index > -1) {
+					windows.splice(index, 1);
+				}
+				stageEl.removeChild(w.el);
+			});
+			return w;
+		}
+
+		function layoutWindows() {
+			let x = 10; 
+			let y = 10;
+			for (let i = 0; i < windows.length; i++) {
+				const w = windows[i];
+				w.setPosition(x, y);
+				x += w.size + 30;
+			}
+		}
+
+		function createInitialWindows() {
+			addWindow(0,  50, 0, 200, 0, 0, 0.006, 0, 400, "#F0F");
+			addWindow(0, 250, 0, 200, 0, 0, 0.006, 0, 400, "cyan");
+			addWindow(0, 500, 0, 200, 0, 0, 0.006, 0, 400, "white");
+			layoutWindows();
+		}
+
+		const colours = ["aquamarine", "#00F", "cyan", "#0F0", "#F0F", "#F00", "white"];
+		var newOffsetX = 30;
+		var newOffsetY = 30;
+		function createAdditionalWindow() {
+			const multiplier = CoreUtil.Math.randInt(5,100);
+			const segmentSize = CoreUtil.Math.randInt(100,1000);
+			const colour = colours[CoreUtil.Math.randInt(0,colours.length -1)];
+
+			const w = addWindow(0, segmentSize, multiplier, 200, 0, 0, 0.01, 0, 400, colour);
+			w.setPosition(newOffsetX, newOffsetY);
+			newOffsetX += 5; newOffsetY += 5;
+		}
+
+		function loadControls() {
+			const containerEl = document.querySelector(".controls");
+			const playEl      = containerEl.querySelector(".play");
+			const pauseEl     = containerEl.querySelector(".pause");
+			const fpsInputEl  = containerEl.querySelector(".fps");
+
+			pauseEl.style.display = "none";
+			playEl .addEventListener("click", e => play());
+			pauseEl.addEventListener("click", e => pause());
+
+			var intervalId;
+			var fps = parseInt(fpsInputEl.value);
+			fpsInputEl.addEventListener("change", e => {
+				fps = parseInt(fpsInputEl.value);
+				clearInterval(intervalId);
+				play();
+			});
+
+			function play() {
+				pauseEl.style.display = "";
+				playEl.style.display = "none";
+				intervalId = setInterval(() => {
+						for (let i = 0; i < windows.length; i++) {
+							windows[i].tick();
+						}
+					}, 1000 / fps);
+			}
+			function pause() {
+				pauseEl.style.display = "none";
+				playEl.style.display = "";
+				clearInterval(intervalId);
+			}
+		}
+		
+		window.onload = () => {
+			if (!isCanvasSupported()) {
+				document.querySelector("section.stage").appendChild(CoreUtil.Html.parseElement("<div class='load-error'>Error: Your browser does not support the HTML Canvas Element</div>"));	
+			} else if (isMobileDevice()) {
+				document.querySelector("section.stage").appendChild(CoreUtil.Html.parseElement("<div class='load-error'>Error: Mobile Devices are not supported</div>"));	
+			} else if (isInternetExplorer()) {
+				document.querySelector("section.stage").appendChild(CoreUtil.Html.parseElement("<div class='load-error'>Error: Please don't use Internet Explorer</div>"));	
+			} else {
+				createInitialWindows();
+				loadControls();
+				document.querySelector(".new-btn").addEventListener("click", e =>  createAdditionalWindow());
+			} 
+		};
+	</script>
+
+	<style>
+		html,body {
+			padding: 0;
+			margin: 0;
+			height: 100%;
+			background-color: rgb(24, 26, 27);
+			background-color: #000;
+		}
+		body {
+			font-family: -apple-system,BlinkMacSystemFont,"Segoe UI","Roboto","Oxygen-Sans","Ubuntu","Cantarell","Helvetica Neue",sans-serif;
+		}
+		strong, th, h1, h2, h3, h4, h5, h6 {
+			font-weight: 700;
+		}
+		h1 {
+			margin-top: 10px;
+			font-weight: 400;
+			font-size: 22px;
+		}
+
+		.load-error {
+			color: #F00;
+			font-weight: 500;
+			font-size: 22px;
+			margin: 20px 0;
+			text-align: center;
+		}
+
+		/* Control Bar */
+		section.control-bar {
+			position:absolute;
+			top: 0;
+			left: 0;
+			border-bottom: solid 1px red;
+			width: 100%;
+			height: 49px;
+			text-align:center;
+			color: #DDD;
+			font-size: 20px;
+		}
+		.controls {
+			display: inline-block;
+			line-height: 49px;
+			height: 49px;
+			overflow: hidden;
+			vertical-align: middle;
+			margin-left: 10px;
+			user-select: none;
+			position: absolute;
+			left: 0;
+			top: 0;
+		}
+		.controls input {
+			border: solid 1px grey;
+			width: 40px;
+			vertical-align: middle;
+			font-size: 15px;
+			background-color: #333;
+			color: #EEE;
+		}
+		.controls label {
+			font-size: 15px;
+		}
+		.controls .play {
+			color: #0C0;
+		}
+		.controls .play:hover {
+			color: #0F0;
+		}
+		.controls .pause {
+			color: #BB0;
+		}
+		.controls .pause:hover {
+			color: #FF0;
+		}
+
+		/* Buttons */ 
+		.btn {
+			cursor: pointer;
+		}
+		.btn:hover {
+			color: #FFF;
+		}
+		.new-btn {
+			color: #0CC;
+		}
+		.new-btn:hover {
+			color: #0FF;
+			cursor: pointer;
+		}
+		
+		/* Stage */
+		section.stage {
+			position:absolute;
+			top: 50px;
+			left: 0;
+			width: 100%;
+			height: calc(100% - 50px);
+			overflow-y: scroll;
+			overflow-x: auto;
+			background-color: #000;
+		}
+		section.stage>.window {
+			/*border: solid 1px aliceblue;*/
+			display: inline-block;
+			text-align: center;
+			position: absolute;
+			
+		}
+		section.stage>.window canvas {
+			cursor: move;
+		}
+		section.stage>.window .graph-config {
+			color: #FFF;	
+			background-color: #000;
+			border: solid 1px grey;
+			width: 100%
+		}
+		section.stage>.window .graph-config td{
+			text-align: left;
+		}
+		section.stage>.window .graph-config span{
+			margin-left: 4px;	
+			user-select: none;
+		}
+		section.stage>.window .graph-config input, section.stage>.window .graph-config select {
+			border: solid 1px grey;
+			width: 100px;
+			vertical-align: middle;
+			font-size: 15px;
+			background-color: #333;
+			color: #EEE;
+		}
+		section.stage>.window .graph-config input:invalid {
+			box-shadow: none;
+		}
+		section.stage>.window .graph-config .hide-btn {
+			color: #CCC;
+			cursor: pointer;
+		}
+		section.stage>.window .graph-config .hide-btn:hover {
+			color: #FFF;
+			text-decoration: underline;
+		}
+		section.stage>.window .graph-config .close-btn {
+			color: #CCC;
+			cursor: pointer;
+		}
+		section.stage>.window .graph-config .close-btn:hover {
+			color: #F00;
+			text-decoration: underline;
+		}
+	</style>
+</head>
+<body>
+	<section class='control-bar'>
+		<div class='controls'>
+			<input class="fps" type="number" step="1" min="0" max="120" value="60"/>
+			<label>FPS</label>
+			<span class='play btn' title='Play'>&#9654;</span>
+			<span class='pause btn' title='Pause'>&#9646;&#9646;</span>
+			<!--
+			<span class='step-backward btn'>&#10703;</span>
+			<span class='step-forward btn'>&#10704;</span>
+			--!>
+		</div>
+		<h1>Spiral multiplication vectors for circular number-line segments...
+		<span class='new-btn btn' title='Add Graph'>&#8853;</span></h1>
+	</section>
+	<section class='stage'>
+	</section>
+
+	<template id='graph-template'>
+		<div class="window">
+			<canvas class="graph"></canvas>
+			<table class="graph-config">
+				<tr><td><span>Segment Start</span>
+					<td><input class='strip-start' type="number" value="0" />
+					<td><span>Increment</span>
+					<td><input class='strip-start-vector' type="number" value="0"/>
+				<tr>
+					<td><span>Segment Size</span>
+					<td><input class='strip-size' type="number" value="500" />
+					<td><span>Increment</span>
+					<td><input class='strip-size-vector' type="number" value="0" />
+				<tr> 
+					<td><span>Multiplier</span>
+					<td><input class='multiplier' type="number" value="0" />
+					<td><span>Increment</span>
+					<td><input class='multiplier-vector' type="number" value="0.003" step="0.01" />
+				<tr> 
+					<td><span>Radius</span>
+					<td><input class='radius' type="number" value="200" />
+					<td><span>Increment</span>
+					<td><input class='radius-vector' type="number" value="0.0" step="0.01" />
+				<tr> 
+					<td><span>Size</span>
+					<td><select class='size'>
+						<option value='200'>200px</option>
+						<option value='400' selected>400px</option>
+						<option value='800'>800px</option>
+						<option value='1200'>1200px</option>
+						<option value='2400'>2400px (slow)</option>
+						<option value='4800'>4800px (slow)</option>
+						</select>
+				<tr> 
+					<td><span>Colour</span>
+					<td><select class='colour'>
+						<option value='aquamarine'>aqua</option>
+						<option value='#111'>black</option>
+						<option value='#00F'>blue</option>
+						<option value='cyan'>cyan</option>
+						<option value='#0F0'>green</option>
+						<option value='#F0F'>magenta</option>
+						<option value='#F00'>red</option>
+						<option value='white' selected>white</option>
+						</select>
+					<td>
+					<td><div style='float:right; margin-right: 4px;'><span class='hide-btn'>hide</span>
+						<span class='close-btn'>close</span></div>
+			</table>
+		</div>
+	</template>
+</body>
+</html>
