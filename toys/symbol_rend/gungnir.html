@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Gungnir Operator - Projected</title>
+  <style>
+    body { margin: 0; background: #000; }
+    canvas { display: block; margin: 0 auto; background: #000; }
+  </style>
+</head>
+<body>
+<canvas id="gungnir" width="800" height="600"></canvas>
+
+<script>
+const canvas = document.getElementById("gungnir");
+const ctx = canvas.getContext("2d");
+
+const cubeCenter = { x: 400, y: 350 };
+const cubeSize = 120;
+const triSize = 50;
+const waveFreq = 3;
+let time = 0;
+
+let rotX = -0.4;
+let rotY = 0.6;
+let isDragging = false;
+let lastMouse = { x: 0, y: 0 };
+
+canvas.addEventListener("mousedown", (e) => {
+  isDragging = true;
+  lastMouse.x = e.clientX;
+  lastMouse.y = e.clientY;
+});
+canvas.addEventListener("mouseup", () => (isDragging = false));
+canvas.addEventListener("mousemove", (e) => {
+  if (!isDragging) return;
+  const dx = e.clientX - lastMouse.x;
+  const dy = e.clientY - lastMouse.y;
+  rotY += dx * 0.005;
+  rotX += dy * 0.005;
+  lastMouse.x = e.clientX;
+  lastMouse.y = e.clientY;
+});
+
+function rotatePoint(x, y, z) {
+  let dx = x * Math.cos(rotY) - z * Math.sin(rotY);
+  let dz = x * Math.sin(rotY) + z * Math.cos(rotY);
+  x = dx;
+  z = dz;
+  let dy = y * Math.cos(rotX) - z * Math.sin(rotX);
+  dz = y * Math.sin(rotX) + z * Math.cos(rotX);
+  y = dy;
+  z = dz;
+  return [x, y, z];
+}
+
+function project3D(x, y, z) {
+  const [rx, ry, rz] = rotatePoint(x, y, z);
+  return { x: cubeCenter.x + rx, y: cubeCenter.y + ry * 0.8, z: rz };
+}
+
+function drawPoint(x, y, r = 4, color = "orange") {
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fillStyle = color;
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 8;
+  ctx.fill();
+  ctx.shadowBlur = 0;
+}
+
+function faceNormal(a, b, c) {
+  const u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
+  const v = [c[0] - a[0], c[1] - a[1], c[2] - a[2]];
+  return [
+    u[1] * v[2] - u[2] * v[1],
+    u[2] * v[0] - u[0] * v[2],
+    u[0] * v[1] - u[1] * v[0],
+  ];
+}
+
+function drawVector(origin, vec, scale = 30, color = 'red') {
+  ctx.beginPath();
+  ctx.moveTo(origin.x, origin.y);
+  ctx.lineTo(origin.x + vec[0] * scale, origin.y + vec[1] * scale);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1;
+  ctx.stroke();
+}
+
+function drawCube() {
+  const s = cubeSize / 2;
+  const rawPoints = [
+    [-s, -s, -s], [ s, -s, -s], [ s,  s, -s], [-s,  s, -s],
+    [-s, -s,  s], [ s, -s,  s], [ s,  s,  s], [-s,  s,  s],
+  ];
+  const faces = [
+    [0,3,2,1], [4,5,6,7],
+    [0,1,5,4], [1,2,6,5], [2,3,7,6], [3,0,4,7]
+  ];
+
+  const rotated = rawPoints.map(([x, y, z]) => rotatePoint(x, y, z));
+  const projected = rotated.map(([x, y, z]) => ({ x: cubeCenter.x + x, y: cubeCenter.y + y * 0.8, z }));
+
+  const faceGroups = { front: [], back: [] };
+  const view = [0, 0, -1];
+
+  faces.forEach((f, i) => {
+    const a = rawPoints[f[0]];
+    const b = rawPoints[f[1]];
+    const c = rawPoints[f[2]];
+    let n = faceNormal(a, b, c);
+    n = rotatePoint(...n);
+    const dot = n[2];
+    const faceCenter = f.reduce((acc, idx) => {
+      acc[0] += rawPoints[idx][0];
+      acc[1] += rawPoints[idx][1];
+      acc[2] += rawPoints[idx][2];
+      return acc;
+    }, [0, 0, 0]).map(v => v / 4);
+    const screenOrigin = project3D(...faceCenter);
+    drawVector(screenOrigin, [n[0], n[1]], 20, 'yellow');
+    if (i === 2 || i === 4) return;
+    (dot < 0 ? faceGroups.front : faceGroups.back).push({ face: f, index: i });
+  });
+
+  faceGroups.back.forEach(({ face, index }) => drawFace(face, projected, index));
+  const { x: cx, y: cy } = project3D(0, 0, 0);
+  drawPoint(cx, cy);
+  return { projected, center: { x: cx, y: cy }, frontFaces: faceGroups.front };
+}
+
+function drawFace(face, pts, index = 0) {
+  const colors = ["red", "green", "blue", "orange", "purple", "cyan"];
+  ctx.beginPath();
+  ctx.moveTo(pts[face[0]].x, pts[face[0]].y);
+  for (let i = 1; i < face.length; i++) {
+    ctx.lineTo(pts[face[i]].x, pts[face[i]].y);
+  }
+  ctx.closePath();
+  ctx.strokeStyle = colors[index % colors.length];
+  ctx.lineWidth = 1.5;
+  ctx.shadowColor = "transparent";
+  ctx.stroke();
+}
+
+function drawFrontFaces(frontFaces, pts) {
+  frontFaces.forEach(({ face, index }) => drawFace(face, pts, index));
+}
+
+function drawWavePath(from, to) {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const length = Math.sqrt(dx * dx + dy * dy);
+  const dirX = dx / length;
+  const dirY = dy / length;
+  const perpX = -dirY;
+  const perpY = dirX;
+
+  ctx.beginPath();
+  for (let i = 0; i <= 100; i++) {
+    const t = i / 100;
+    const bx = from.x + dx * t;
+    const by = from.y + dy * t;
+    const taper = Math.sin(Math.PI * t);
+    const amp = 20 * taper * Math.sin(waveFreq * 2 * Math.PI * t + time);
+    const x = bx + perpX * amp;
+    const y = by + perpY * amp;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.strokeStyle = "purple";
+  ctx.shadowColor = "rgba(255,255,255,0.4)";
+  ctx.shadowBlur = 4;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+}
+
+function getTriangleGeometry() {
+  const yOffset = -160;
+  const tri3D = [];
+
+  for (let i = 0; i < 3; i++) {
+    const a = Math.PI / 6 + (i * 2 * Math.PI) / 3;
+    const x = triSize * Math.cos(a);
+    const z = triSize * Math.sin(a);
+    tri3D.push([x, yOffset, z]);
+  }
+
+  // Rotate the triangle into view space for normal calculation
+  const rotated = tri3D.map(p => rotatePoint(...p));
+  const normal = faceNormal(rotated[0], rotated[1], rotated[2]);
+
+  // For drawing, use project3D (which includes rotation)
+  const projected = tri3D.map(p => project3D(...p));
+  const center2D = project3D(0, yOffset, 0);
+
+  return { projected, normal, center2D };
+}
+
+function drawTriangle(projected, color = "white") {
+  ctx.beginPath();
+  ctx.moveTo(projected[0].x, projected[0].y);
+  ctx.lineTo(projected[1].x, projected[1].y);
+  ctx.lineTo(projected[2].x, projected[2].y);
+  ctx.closePath();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.5;
+  ctx.shadowColor = "transparent";
+  ctx.stroke();
+}
+
+
+function drawScene() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  const tri = getTriangleGeometry();
+  const view = [0, 0, -1]; // Camera looks along negative Z
+  const dot = tri.normal[0] * view[0] + tri.normal[1] * view[1] + tri.normal[2] * view[2];
+
+  if (dot < 0) {
+    // Triangle facing camera
+    drawTriangle(tri.projected);
+    const { projected, center, frontFaces } = drawCube();
+    drawWavePath(center, tri.center2D);
+    drawFrontFaces(frontFaces, projected);
+  } else {
+    // Triangle facing away
+    const { projected, center, frontFaces } = drawCube();
+    drawWavePath(center, tri.center2D);
+    drawFrontFaces(frontFaces, projected);
+    drawTriangle(tri.projected);
+  }
+}
+
+
+
+function animate() {
+  time += 0.03;
+  drawScene();
+  requestAnimationFrame(animate);
+}
+
+animate();
+</script>
+</body>
+</html>
+

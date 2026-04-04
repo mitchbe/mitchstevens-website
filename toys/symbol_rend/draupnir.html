@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Draupnir Cube Emission</title>
+  <style>
+    body { margin: 0; background: black; }
+    canvas { display: block; cursor: grab; }
+    canvas:active { cursor: grabbing; }
+  </style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+let width = canvas.width = window.innerWidth;
+let height = canvas.height = window.innerHeight;
+
+window.addEventListener('resize', () => {
+  width = canvas.width = window.innerWidth;
+  height = canvas.height = window.innerHeight;
+  center.x = width / 2;
+  center.y = height / 2;
+});
+
+const center = { x: width / 2, y: height / 2 };
+
+let yaw = 0, pitch = 0;
+let isDragging = false;
+let lastMouse = { x: 0, y: 0 };
+
+canvas.addEventListener('mousedown', e => {
+  isDragging = true;
+  lastMouse = { x: e.clientX, y: e.clientY };
+});
+canvas.addEventListener('mouseup', () => isDragging = false);
+canvas.addEventListener('mousemove', e => {
+  if (!isDragging) return;
+  yaw += (e.clientX - lastMouse.x) * 0.01;
+  pitch += (e.clientY - lastMouse.y) * 0.01;
+  lastMouse = { x: e.clientX, y: e.clientY };
+});
+
+const EMIT_INTERVAL = 3000;
+const LIFETIME = EMIT_INTERVAL * 3;
+const FADE_DURATION = 3000;
+const VERTEX_LIFETIME = 2000;
+const MAX_SIZE = Math.max(window.innerWidth, window.innerHeight) * 0.2;
+const MIN_SIZE = 5;
+
+function rotate3D([x, y, z]) {
+  let x1 = x * Math.cos(yaw) - z * Math.sin(yaw);
+  let z1 = x * Math.sin(yaw) + z * Math.cos(yaw);
+  let y1 = y * Math.cos(pitch) - z1 * Math.sin(pitch);
+  let z2 = y * Math.sin(pitch) + z1 * Math.cos(pitch);
+  return [x1, y1, z2];
+}
+
+function project3D([x, y, z]) {
+  const scale = 400 / (z * 0.5 + 2);
+  return [center.x + x * scale, center.y + y * scale];
+}
+
+class Cube {
+  constructor(birthTime) {
+    this.birthTime = birthTime;
+    this.fadeStartTime = null;
+  }
+
+  getSize(now) {
+    const age = now - this.birthTime;
+    const t = age / LIFETIME;
+    return MIN_SIZE + (MAX_SIZE - MIN_SIZE) * t;
+  }
+
+  getVertexPositions(now) {
+    const half = this.getSize(now) / 2;
+    return [
+      [-1, -1, -1], [1, -1, -1], [1, 1, -1], [-1, 1, -1],
+      [-1, -1,  1], [1, -1,  1], [1, 1,  1], [-1, 1,  1]
+    ].map(([x, y, z]) => rotate3D([x * half / 100, y * half / 100, z * half / 100]));
+  }
+
+  draw(ctx, now, dotAlpha) {
+    const age = now - this.birthTime;
+    if (age < 0) return;
+
+    let opacity = 1;
+    if (this.fadeStartTime !== null) {
+      const fadeAge = now - this.fadeStartTime;
+      if (fadeAge >= FADE_DURATION) return;
+      opacity = 1 - fadeAge / FADE_DURATION;
+    }
+
+    const verts = this.getVertexPositions(now).map(project3D);
+    const edges = [
+      [0,1],[1,2],[2,3],[3,0],
+      [4,5],[5,6],[6,7],[7,4],
+      [0,4],[1,5],[2,6],[3,7]
+    ];
+
+    ctx.strokeStyle = `rgba(0,255,255,${opacity})`;
+    edges.forEach(([a, b]) => {
+      ctx.beginPath();
+      ctx.moveTo(...verts[a]);
+      ctx.lineTo(...verts[b]);
+      ctx.stroke();
+    });
+
+    ctx.fillStyle = `rgba(255,255,255,${dotAlpha})`;
+    verts.forEach(([x, y]) => {
+      ctx.beginPath();
+      ctx.arc(x, y, 2, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  }
+}
+
+class VertexCube {
+  constructor(parentCube, vertexIndex, birthTime) {
+    this.parentCube = parentCube;
+    this.vertexIndex = vertexIndex;
+    this.birthTime = birthTime;
+
+    const vertexOffsets = [
+      [-1, -1, -1], [1, -1, -1], [1, 1, -1], [-1, 1, -1],
+      [-1, -1,  1], [1, -1,  1], [1, 1,  1], [-1, 1,  1]
+    ];
+    this.spawnOffset = vertexOffsets[vertexIndex];
+    this.spawnScale = this.parentCube.getSize(birthTime) / 200;
+  }
+
+  draw(ctx, now) {
+    const t = (now - this.birthTime) / VERTEX_LIFETIME;
+    if (t > 1) return;
+
+    const size = MIN_SIZE + (MAX_SIZE - MIN_SIZE) * t;
+    const half = size / 2;
+    const opacity = 1 - t;
+
+    const verts = [
+      [-1, -1, -1], [1, -1, -1], [1, 1, -1], [-1, 1, -1],
+      [-1, -1,  1], [1, -1,  1], [1, 1,  1], [-1, 1,  1]
+    ].map(([x, y, z]) => {
+      const base = [
+        this.spawnOffset[0] * this.spawnScale,
+        this.spawnOffset[1] * this.spawnScale,
+        this.spawnOffset[2] * this.spawnScale
+      ];
+      const pos = [
+        x * half / 100 + base[0],
+        y * half / 100 + base[1],
+        z * half / 100 + base[2]
+      ];
+      return project3D(rotate3D(pos));
+    });
+
+    const edges = [
+      [0,1],[1,2],[2,3],[3,0],
+      [4,5],[5,6],[6,7],[7,4],
+      [0,4],[1,5],[2,6],[3,7]
+    ];
+
+    ctx.strokeStyle = `rgba(180,180,180,${opacity})`;
+    edges.forEach(([a, b]) => {
+      ctx.beginPath();
+      ctx.moveTo(...verts[a]);
+      ctx.lineTo(...verts[b]);
+      ctx.stroke();
+    });
+  }
+}
+
+const cubes = [];
+const vertexCubes = [];
+let lastEmitTime = performance.now();
+
+function animate(now) {
+  requestAnimationFrame(animate);
+  ctx.fillStyle = 'black';
+  ctx.fillRect(0, 0, width, height);
+
+  const tick = (now % 1000) < 100;
+  const dotAlpha = tick ? 1.0 : 0.2;
+
+  if (now - lastEmitTime >= EMIT_INTERVAL) {
+    const newCube = new Cube(now);
+    cubes.push(newCube);
+
+    if (cubes.length > 1) {
+      const inner = cubes[cubes.length - 2];
+      if (!inner.fadeStartTime) inner.fadeStartTime = now;
+      for (let i = 0; i < 8; i++) {
+        vertexCubes.push(new VertexCube(inner, i, now));
+      }
+    }
+
+    lastEmitTime += EMIT_INTERVAL;
+  }
+
+  while (cubes.length && now - cubes[0].birthTime > LIFETIME) cubes.shift();
+  while (vertexCubes.length && now - vertexCubes[0].birthTime > VERTEX_LIFETIME) vertexCubes.shift();
+
+  vertexCubes.forEach(vc => vc.draw(ctx, now));
+  cubes.forEach(cube => cube.draw(ctx, now, dotAlpha));
+
+  ctx.fillStyle = `rgba(255,255,255,${dotAlpha})`;
+  ctx.beginPath();
+  ctx.arc(center.x, center.y, 3, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+requestAnimationFrame(animate);
+</script>
+</body>
+</html>
+
