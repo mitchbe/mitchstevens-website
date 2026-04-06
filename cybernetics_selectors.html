@@ -23,20 +23,171 @@
 
     <h1>A Selector-Based Reframing of Cybernetics</h1>
 
-    <p class="muted">2026</p>
+    <p class="muted">2026 Working DRAFT - Ideas in Progress</p>
 
     <p>
       Cybernetics, as developed by W. Ross Ashby and others, is often presented in terms of systems, feedback loops, and control mechanisms. Central to this tradition is the distinction between “trivial” and “non-trivial” machines, where a trivial machine maps input to output via a fixed function, and a non-trivial machine introduces internal state, rendering behavior dependent on history.
     </p>
 
     <p>
-      While operationally useful, this framing obscures a more fundamental structure. It conflates three distinct layers: the physical substrate, the relational pattern observed, and the conceptual model used by the observer. The result is a language in which properties of models are attributed to machines themselves.
+      In practice, this distinction is often used operationally, and not always taken as a literal claim about physical systems.
+    </p>
+
+    <p>
+      Still, this framing can obscure a more fundamental structure. It can conflate three distinct layers: the physical substrate, the relational pattern observed, and the conceptual model used by the observer. The result is a language in which properties of models are easily attributed to machines themselves.
     </p>
 
     <p>
       A cleaner formulation emerges if we replace the machine-centric view with a selector-based one.
     </p>
 
+
+    <h2>Trivial Machines as Idealizations</h2>
+
+    <p>
+      At face value, the idea is straightforward. A “trivial machine” is one where a given input produces a predictable output—essentially, a stable input–output relation. A “non-trivial machine” is one where the output depends not only on the input, but also on internal state. The problem is that no real system is actually trivial — triviality is something the observer assumes by selecting a stable relation and ignoring everything else. This is a sound basis for reasoning, but it must be understood as an abstraction, not a property of the system itself.
+    </p>
+
+    <p>
+      A ripple adder makes this concrete. At the level of reasoning, we describe it with the relation:
+    </p>
+
+    <pre><code>A = B + C</code></pre>
+
+    <p>
+      This is what cybernetics would call a “trivial machine”: a stable mapping from inputs to outputs. It is a <strong>constraint we assume holds</strong>, and from which we derive further reasoning.
+    </p>
+
+    <p>
+      But the physical ripple adder is not that relation. It is a chain of gates whose behavior depends on, for example:
+    </p>
+
+    <ul>
+      <li>voltage levels</li>
+      <li>temperature</li>
+      <li>non-physical interference</li>
+    </ul>
+
+    <p>
+      In other words, it is a <strong>stateful, embedded process</strong>. By any literal reading, it is a non-trivial machine.
+    </p>
+
+    <p>
+      The only reason we can treat it as “trivial” is that we have engineered it so that, within certain bounds, the relation A = B + C remains statistically stable.
+    </p>
+
+    <p>
+      The trivial description is therefore not describing the machine—it is describing a <strong>selected invariant we expect the machine to satisfy</strong>.
+    </p>
+
+    <p>
+      This is the key point:
+    </p>
+
+    <blockquote>
+      The “trivial machine” is not the implementation, but a constraint we reason with.
+    </blockquote>
+
+    <p>
+      All reasoning derived from A = B + C is valid only insofar as the physical system continues to satisfy that constraint.
+    </p>
+
+    <p>
+      When the underlying conditions drift—noise, thermal effects, timing violations—the relation breaks, and the reasoning no longer applies.
+    </p>
+
+    <p>
+      So in practice:
+    </p>
+
+    <ul>
+      <li>the ripple adder is a non-trivial physical system</li>
+      <li>we reason about it using a trivial relation</li>
+      <li>the validity of that reasoning depends on the stability of the underlying conditions</li>
+    </ul>
+
+    <p>
+      This exposes the issue with the terminology. Calling A = B + C a “machine” conflates:
+    </p>
+
+    <ul>
+      <li>an <strong>abstract relation</strong> (a constraint over values)</li>
+      <li>with a <strong>physical system</strong> (a stateful process in the world)</li>
+    </ul>
+
+    <p>
+      The same structure applies broadly: any engineered system is treated as “trivial” only insofar as its behavior remains within a selected envelope of stability.
+    </p>
+
+    <h2>Relations as Selected Invariants</h2>
+
+    <p>
+      The former is a model used for reasoning. The latter is an implementation that may or may not satisfy that model.
+    </p>
+
+    <p>
+      In that sense, the trivial/non-trivial machine dichotomy is not really a classification of machines at all. It is a distinction between:
+    </p>
+
+    <ul>
+      <li>relations that are fully captured by the observer’s selection</li>
+      <li>and relations that are only partially captured, with hidden or evolving state</li>
+    </ul>
+
+    <p>
+      Framed as a distinction between machines, it risks conflating distinct levels of description.
+    </p>
+
+    <p>
+      The distinction between “trivial” and “non-trivial” machines can therefore be restated without appealing to machines at all.
+    </p>
+
+    <p>
+      What is called a “trivial machine” is not a property of a system, but a relation selected by an observer and assumed to hold. It is a constraint over possible values — for example, A = B + C — that remains stable enough to support reasoning.
+    </p>
+
+    <p>
+      The physical system is then treated as if it instantiates that relation, so long as the conditions required for its stability are maintained.
+    </p>
+
+    <p>
+      This suggests a clearer formulation:
+    </p>
+
+    <p>
+      A “trivial machine” is not a machine, but a <strong>selected invariant</strong> — a relation over a system that has been isolated for the purpose of reasoning and treated as if it remains stable.
+    </p>
+
+    <p>
+      This selection can be understood as a <strong>selector</strong>: a relation that filters the behavior of a system down to those configurations that satisfy the constraint. Formally, a selector can be understood as a constraint over a space of possible system states, identifying those configurations that satisfy a given relation.
+    </p>
+
+    <p>
+      In the case of A = B + C, the selector isolates only those states of the system consistent with addition.
+    </p>
+
+    <p>
+      The crucial step is <strong>idealization</strong>. The selected relation is not merely identified, but assumed to hold, allowing reasoning to proceed within its bounds.
+    </p>
+
+    <p>
+      The physical system is then treated as if it instantiates this relation, so long as the conditions required for its stability are maintained.
+    </p>
+
+    <p>
+      All reasoning proceeds within this assumption.
+    </p>
+
+    <p>
+      When the underlying conditions drift beyond the bounds in which the relation holds, the invariant breaks, and the reasoning derived from it ceases to apply.
+    </p>
+
+    <p>
+      On this view, the machine itself is not intrinsically trivial. Only the relation we select from it is.
+    </p>
+
+
+    <!--
     <h2>Selectors and Patterns</h2>
 
     <p>
@@ -66,6 +217,7 @@
     <p>
       Thus, engineering is not the construction of functions, but the construction of conditions under which certain selectors remain valid.
     </p>
+    -->
 
     <h2>Trivial and Non-Trivial Reinterpreted</h2>
 
@@ -94,13 +246,17 @@
     </p>
 
     <p>
-      This removes the need to introduce time as a primitive. Temporal behavior becomes an indexing over relation applications, rather than a foundational dimension of the model.
+      This reduces the need to treat time as a primitive in the model. Temporal behavior becomes an indexing over relation applications, rather than a foundational dimension of the model.
     </p>
 
     <h2>Recursion and Higher-Order Selection</h2>
 
     <p>
       Once selectors are understood as relations, a further consequence follows: selectors themselves can be selected.
+    </p>
+
+    <p>
+      Once relations are treated as primary, they can be composed and operated on in the same way as other objects of analysis.
     </p>
 
     <p>
@@ -146,7 +302,11 @@
     <h2>Toward a Pattern Ontology</h2>
 
     <p>
-      The selector perspective suggests a shift away from object-centered ontology toward a pattern-centered one.
+      If taken as more than a modeling framework, the selector perspective suggests a shift away from object-centered ontology toward a pattern-centered one.
+    </p>
+
+    <p>
+      Whether this shift is ontological or merely methodological is left open.
     </p>
 
     <p>
@@ -164,7 +324,13 @@
     </p>
 
     <p>
-      This reframing preserves the operational insights of Ashby while removing the conceptual ambiguities introduced by machine-based language. It replaces hierarchy with relation, causation with selection, and system boundaries with domains of pattern stability.
+      This reframing preserves the operational insights of Ashby while removing some of the conceptual ambiguities introduced by machine-based language.
+    </p>
+
+    <p>
+      It emphasizes relation over hierarchy.
+      It reframes causation in terms of selection.
+      It treats system boundaries as domains of pattern stability.
     </p>
 
     <p>
